@@ -4,7 +4,8 @@ import { Swiper, Grid, List, Image } from 'antd-mobile'
 import { KoubeiFill, TeamFill, LocationFill, EditSFill, DownOutline, EnvironmentOutline, SearchOutline } from 'antd-mobile-icons'
 
 
-import { getSwiperItems, getGroups, getInformation, getCity } from '../../../request/home'
+import { getSwiperItems, getGroups, getInformation } from '../../../request/home'
+import { getCurrentLocation} from '../../../utils/index'
 import './index.scss'
 
 
@@ -37,15 +38,7 @@ const Search = () => {
   const navigate = useNavigate()
   const [city, setCity] = useState({label: '上海'})
   useEffect(() => {
-    window.AMap.plugin('AMap.CitySearch', function () {
-      var citySearch = new window.AMap.CitySearch()
-      citySearch.getLocalCity(function (status, result) {
-        if (status === 'complete' && result.info === 'OK') {
-          // 查询成功，result即为当前所在城市信息
-          getCity(result.city).then(res => setCity(res.data.body))
-        }
-      })
-    })
+    getCurrentLocation().then(res => setCity(res))
   }, [])
 
   return (

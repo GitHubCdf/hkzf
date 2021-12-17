@@ -6,6 +6,9 @@ import Main from './pages/Main';
 import CityLink from './pages/CityLink';
 import Map from './pages/Map'
 
+// 导入地上那方组件或库
+import 'react-virtualized/styles.css'
+
 
 function App() {
   return (

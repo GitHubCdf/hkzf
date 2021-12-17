@@ -1,0 +1,48 @@
+.city-list {
+  height: 100%;
+  padding-top: 45px;
+
+  &:first-child {
+    margin-top: -45px;
+  }
+
+  .label {
+    height: 25px;
+    padding: 5px 0 5px 10px;
+    color: #999;
+    font-size: 14px;
+  }
+
+  .city-item {
+    height: 40px;
+    line-height: 40px;
+    margin: 0 5px;
+    font-size: 16px;
+    padding-left: 10px;
+    background-color: #fff;
+    border-bottom: 1px solid #eee;
+  }
+
+  .city-navigation-list {
+    position: fixed;
+    top: 60px;
+    right: 10px;
+
+    li {
+      margin: 12px 0;
+      width: 14px;
+      height: 14px;
+      text-align: center;
+      border-radius: 50%;
+      line-height: 14px;
+    }
+     
+    .active-city {
+      color: #fff;
+      background-color: #1677ff;
+    }
+
+  }
+
+
+}
