@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { NavBar } from 'antd-mobile'
+import { Toast, Loading } from 'antd-mobile'
 import { List, AutoSizer } from 'react-virtualized'
+
+import NavHeader from '../../components/NavHeader'
 
 // 请求接口
 import { getCityList } from '../../utils'
@@ -12,7 +13,7 @@ import './index.scss'
 const listRef = React.createRef()
 
 const CityNavigationList = (props) => {
-  const { cityIndex, activeIndex, setactiveIndex, scrollToRow } = props
+  const { cityIndex, activeIndex, listRef } = props
 
 
   function formatPrefix(prefix) {
@@ -26,8 +27,7 @@ const CityNavigationList = (props) => {
 
   const handleClick = (index) => {
     return function () {
-      setactiveIndex(index)
-      scrollToRow(index)
+      listRef.current.scrollToRow(index)
     }
   }
 
@@ -35,8 +35,8 @@ const CityNavigationList = (props) => {
     <ul className='city-navigation-list'>
       {
         cityIndex?.map((prefix, index) => (
-          <li key={prefix} onClick={handleClick(index)} className={activeIndex === index ? 'active-city' : ''}>
-            {formatPrefix(prefix)}
+          <li key={prefix} onClick={handleClick(index)}>
+            <p className={activeIndex === index ? 'active-city' : ''}>{formatPrefix(prefix)}</p>
           </li>
         ))
       }
@@ -45,11 +45,11 @@ const CityNavigationList = (props) => {
 }
 
 const CityLinkRef = React.forwardRef((props, ref) => {
-  const navigate = useNavigate()
 
   // state or data definition
   const [cities, setcities] = useState({ cityList: {}, cityIndex: null })
   const [activeIndex, setactiveIndex] = useState(0)
+  const [loading, setloading] = useState(true)
 
   // 计算返回每一项高度
   function rowHeight({ index }) {
@@ -76,6 +76,19 @@ const CityLinkRef = React.forwardRef((props, ref) => {
     isVisible, // This row is visible within the List (eg it is not an overscanned row)
     style, // Style object to be applied to row (to position it)
   }) {
+    const handleClick = (city) => {
+      return function () {
+        if (['北京', '杭州', '广州', '上海', '深圳'].includes(city.label)) {
+          sessionStorage.setItem('hkzf_location', JSON.stringify(city))
+          window.history.go(-1)
+        } else {
+          Toast.show({
+            content: '城市暂无房源信息',
+            duration: 1000,
+          })
+        }
+      }
+    }
     const { cityList, cityIndex: { [index]: prefix } } = cities
     return (
       <div key={key} style={style}>
@@ -83,7 +96,7 @@ const CityLinkRef = React.forwardRef((props, ref) => {
         <ul>
           {
             cityList[prefix]?.map(city => (
-              <li key={city.value} className='city-item'>
+              <li key={city.value} className='city-item' onClick={handleClick(city)}>
                 {city.label}
               </li>
             ))
@@ -96,6 +109,7 @@ const CityLinkRef = React.forwardRef((props, ref) => {
   // 用于获取索引
   function onRowRendered({ overscanStartIndex, overscanStopIndex, startIndex, stopIndex }) {
     if (startIndex !== activeIndex) {
+      console.log(startIndex, activeIndex)
       setactiveIndex(startIndex)
     }
   }
@@ -104,33 +118,40 @@ const CityLinkRef = React.forwardRef((props, ref) => {
   useEffect(() => {
     getCityList().then((res) => {
       setcities(res)
-      ref.current?.measureAllRows()
+      setloading(false)
     })
+    console.log(ref)
   }, [ref])
 
   return (
     <section className="city-list">
-      <NavBar style={{ '--border-bottom': '1px solid #eee' }} onBack={() => navigate(-1)}>城市选择</NavBar>
-      <AutoSizer>
-        {
-          ({ height, width }) => (<List
-            width={width}
-            height={height}
-            rowCount={cities.cityIndex?.length || 0}
-            rowHeight={rowHeight}
-            rowRenderer={rowRenderer}
-            onRowsRendered={onRowRendered}
-            scrollToAlignment="start"
-            ref={ref}
-          />)
-        }
-      </AutoSizer>
-      <CityNavigationList
-        cityIndex={cities.cityIndex}
-        activeIndex={activeIndex}
-        setactiveIndex={setactiveIndex}
-        scrollToRow={ref.current?.scrollToRow.bind(listRef.current)}
-      />
+      <NavHeader>城市选择</NavHeader>
+      {
+        loading ? <Loading className="loading" color='primary' /> : (
+          <>
+            <AutoSizer>
+              {
+                ({ height, width }) => (<List
+                  width={width}
+                  height={height}
+                  rowCount={cities.cityIndex?.length || 0}
+                  rowHeight={rowHeight}
+                  rowRenderer={rowRenderer}
+                  onRowsRendered={onRowRendered}
+                  scrollToAlignment="start"
+                  ref={ref}
+                />)
+              }
+            </AutoSizer>
+            <CityNavigationList
+              cityIndex={cities.cityIndex}
+              activeIndex={activeIndex}
+              setactiveIndex={setactiveIndex}
+              listRef={ref}
+            />
+          </>
+        )
+      }
     </section>
   )
 })

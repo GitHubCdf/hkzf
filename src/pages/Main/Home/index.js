@@ -45,7 +45,7 @@ const Search = () => {
     <section className='search'>
       <div>
         <p className='location' onClick={() => navigate('/citylink')}>
-          <span>{city.label}</span>
+          <span>{city?.label}</span>
           <DownOutline fontSize={10} />
         </p>
         <div className='search-input' onClick={() => navigate('/search')}>
