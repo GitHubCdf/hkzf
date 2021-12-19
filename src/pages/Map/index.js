@@ -1,85 +1,80 @@
-import { useEffect, useState } from 'react'
-
+import React, { useEffect, useState } from 'react'
+import { Image, List } from 'antd-mobile'
 // 自定义组件
 import NavHeader from '../../components/NavHeader'
-import { getAreaHouseInfo } from '../../request/map'
+// request
+import { getAreaHouseInfo, getCommunityHouseInfo } from '../../request/map'
 import style from './index.module.scss'
 
 
 // 获取地图函数
 const { AMap } = window
 
-export default function Map() {
-  const [coords, setcoords] = useState({ lng: 116.397428, lat: 39.90923 })
-  const [areaHouse, setareaHouse] = useState([])
-
-  function creatMarker({label,count,coord:{longitude,latitude}}) {
-    // 创建文本标记
-    const marker = new AMap.Text({
-      anchor: 'center',
-      text: `<div class=${style.mapMarker}>
-              <p>${label}</p>
-              <span>${count}套</span>
-            </div>`
-    })
-    marker.setStyle({
-      border: 0,
-      padding: 0,
-      backgroundColor: 'transparent',
-      width: '60px',
-      height: '60px',
-      color: '#fff',
-      textAlign: 'center',
-    })
-    marker.setPosition(new AMap.LngLat(longitude,latitude))
-    marker.on('touchstart', (e) => {
-      console.log(e)
-    })
-    return marker
+const HouseInfo = ({label, value }) => {
+  // state 
+  const [houseInfo, setHouseInfo] = useState([])
+  // 获取房源信息
+  async function getHouseInfo(value) {
+    const { data: { body: { list } } } = await getCommunityHouseInfo(value)
+    setHouseInfo(list)
   }
 
-  // 获取城市坐标
+  // Did Mount
   useEffect(() => {
-    const { label, value } = JSON.parse(sessionStorage.getItem('hkzf_location'))
-    // AMap.plugin('AMap.CitySearch', function () {
-    //   var citySearch = new AMap.CitySearch()
-    //   citySearch.getLocalCity(function (status, result) {
-    //     if (status === 'complete' && result.info === 'OK') {
-    //       // 查询成功，result即为当前所在城市信息
-    //       const { bounds } = result
-    //       const { lat, lng } = bounds.getCenter()
-    //       console.log({ lat, lng })
-    //       setcoords({ lat, lng })
-    //     }
-    //   })
-    // })
-    AMap.plugin('AMap.Geocoder', function () {
-      var geocoder = new AMap.Geocoder({
-        // city 指定进行编码查询的城市，支持传入城市名、adcode 和 citycode
-        city: label
-      })
+    getHouseInfo(value)
+  }, [value])
 
-      geocoder.getLocation(label, function (status, result) {
-        if (status === 'complete' && result.info === 'OK') {
-          // result中对应详细地理坐标信息
-          const { geocodes: { '0': { location: { lng, lat } } } } = result
-          setcoords({ lat, lng })
-        }
-      })
-    })
-    //
-    getAreaHouseInfo(value).then(({ data: { body } }) => {
-      setareaHouse(body)
-    })
-  }, [])
+  return (
+    <div className={[style.houseInfo, style.houseShow].join(' ')}>
+      <section className={style.community}>
+        <h3>{label}</h3>
+      </section>
+      <section className={style.houseInfo}>
+        <List>
+          {
+            houseInfo.map(({ houseCode, houseImg, title, desc, tags, price }) => (
+              <List.Item
+                key={houseCode}
+                prefix={
+                  <Image src={`http://microcun.cn:8080${houseImg}`} height={80} width={120} fit='cover' />
+                }
+              >
+                <div className={style.houseDesc}>
+                  <h4>{title}</h4>
+                  <div>
+                    <p className={style.desc}>{desc}</p>
+                    <p>
+                      {
+                        tags.map(tag => (
+                          <span className={style.tag} key={tag}>{tag}</span>
+                        ))
+                      }
+                    </p>
+                    <span className={style.housePrice}>{price}元/月</span>
+                  </div>
+                </div>
+              </List.Item>
+            ))
+          }
+        </List>
+      </section>
+    </div>
+  )
 
-  // 创建地图
-  useEffect(() => {
+}
+
+
+export default function Map() {
+
+  // 创建 marker
+
+  // initMap 初始化地图
+  function initMap() {
     // 初始化地图
-    const { lng, lat } = coords
-    const map = new AMap.Map('container')
-    const location = new AMap.LngLat(lng, lat)
-    map.setZoomAndCenter(10, location)
+    const map = new AMap.Map('container', {
+      zoom: 10,
+      zooms: [4, 18]
+    })
     // 添加插件
     AMap.plugin(['AMap.Scale', 'AMap.ToolBar'], () => {//异步同时加载多个插件
       var toolbar = new AMap.ToolBar();
@@ -88,21 +83,203 @@ export default function Map() {
       map.addControl(scale);
     })
 
-    areaHouse.map(creatMarker).forEach(marker => marker.setMap(map))
+    return map
+  }
 
-
+  // 绘制相关信息
+  function paintMapInfo(map) {
+    // 创建 rectangle marker
+    function createRect({ label, count, coord: { longitude: lng, latitude: lat }, value }) {
+      // 创建文本标记
+      const marker = new AMap.Text({
+        anchor: 'center',
+        text: `<div class=${style.mapRect}>
+                <p>${label}</p>
+                <span>${count}套</span>
+              </div>`
+      })
+      marker.setStyle({
+        border: 0,
+        padding: 0,
+        backgroundColor: 'transparent',
+        color: '#fff',
+        textAlign: 'center',
+      })
+      marker.setPosition(new AMap.LngLat(lng, lat))
+      marker.on('touchstart', () => {
+        const position = new AMap.LngLat(lng, lat)
+        map.setCenter(position)
+      })
+      return marker
+    }
+    // 创建circle标记 marker
+    function createCircle({ label, count, coord: { longitude: lng, latitude: lat }, value }) {
+      // 创建文本标记
+      const marker = new AMap.Text({
+        anchor: 'center',
+        text: `<div class=${style.mapCircle}>
+                <p>${label}</p>
+                <span>${count}套</span>
+              </div>`
+      })
+      marker.setStyle({
+        border: 0,
+        padding: 0,
+        backgroundColor: 'transparent',
+        width: '60px',
+        height: '60px',
+        color: '#fff',
+        textAlign: 'center',
+      })
+      marker.setPosition(new AMap.LngLat(lng, lat))
+      marker.on('touchstart', () => {
+        create({ lng, lat, value })
+      })
+      return marker
+    }
 
     // 
+    function create({ lng, lat, value }) {
+      const { nextZoom: zoom, type } = getMarkerType(map)
+      const creatMarker = type === 'circle' ? createCircle : createRect
+      map.clearMap()
+      map.setZoomAndCenter(zoom, new AMap.LngLat(lng, lat))
+      getAreaHouseInfo(value).then(({ data: { body } }) => {
+        map.add(body.map(creatMarker))
+      })
+    }
+
+    // 根据 zoom 判断 marker 类型
+    function getMarkerType(map) {
+      const zoom = map.getZoom()
+      if (zoom < 12) {
+        return { type: 'circle', nextZoom: 12 }
+      } else {
+        return { type: 'rect', nextZoom: 15 }
+      }
+    }
+
+    // 获取当前城市地址
+    const { label, value } = JSON.parse(sessionStorage.getItem('hkzf_location'))
+    AMap.plugin('AMap.Geocoder', function () {
+      var geocoder = new AMap.Geocoder({
+        // city 指定进行编码查询的城市，支持传入城市名、adcode 和 citycode
+        city: label
+      })
+      geocoder.getLocation(label, function (status, result) {
+        if (status === 'complete' && result.info === 'OK') {
+          // result中对应详细地理坐标信息
+          const { geocodes: { '0': { location: { lng, lat } } } } = result
+          map.setZoomAndCenter(10, new AMap.LngLat(lng, lat))
+          getAreaHouseInfo(value).then(({ data: { body } }) => {
+            map.add(body.map(createCircle))
+          })
+        }
+      })
+    })
+  }
+
+
+
+  // DidMount
+  useEffect(() => {
+    const map = initMap()
+    paintMapInfo(map)
     return () => {
+      console.log('clear and destoryed')
       map.destroy()
     }
-  }, [coords, areaHouse])
+  }, [])
+
+  // 
 
   return (
     <>
       <NavHeader>地图找房</NavHeader>
       <div id="container" className={style.container}></div>
-
+      <HouseInfo label={'花园小区'} value={'AREA|88cff55c-aaa4-e2e0'}></HouseInfo>
     </>
   )
 }
+
+
+
+// export default class Map extends React.Component {
+
+//   state = {}
+
+//   componentDidMount() {
+//     // 创建地图
+//     let map = new AMap.Map('container')
+//     // 添加插件
+//     AMap.plugin(['AMap.Scale', 'AMap.ToolBar'], () => {//异步同时加载多个插件
+//       var toolbar = new AMap.ToolBar();
+//       map.addControl(toolbar);
+//       var scale = new AMap.Scale();//驾车路线规划
+//       map.addControl(scale);
+//     })
+
+//     // 创建 marker
+//     function creatMarker({ label, count, coord: { longitude: lng, latitude: lat }, value }) {
+//       // 创建文本标记
+//       const marker = new AMap.Text({
+//         anchor: 'center',
+//         text: `<div class=${style.mapMarker}>
+//               <p>${label}</p>
+//               <span>${count}套</span>
+//             </div>`
+//       })
+//       marker.setStyle({
+//         border: 0,
+//         padding: 0,
+//         backgroundColor: 'transparent',
+//         width: '60px',
+//         height: '60px',
+//         color: '#fff',
+//         textAlign: 'center',
+//       })
+//       marker.setPosition(new AMap.LngLat(lng, lat))
+//       marker.on('touchstart', () => {
+//         map.clearMap()
+//         map.setZoomAndCenter(11, new AMap.LngLat(lng, lat))
+//         getAreaHouseInfo(value).then(({ data: { body } }) => {
+//           map.add(body.map(creatMarker))
+//         })
+//       })
+//       return marker
+//     }
+
+//     const { label, value } = JSON.parse(sessionStorage.getItem('hkzf_location'))
+//     //
+
+//     // 获取当前城市地址
+//     AMap.plugin('AMap.Geocoder', function () {
+//       var geocoder = new AMap.Geocoder({
+//         // city 指定进行编码查询的城市，支持传入城市名、adcode 和 citycode
+//         city: label
+//       })
+//       geocoder.getLocation(label, function (status, result) {
+//         if (status === 'complete' && result.info === 'OK') {
+//           // result中对应详细地理坐标信息
+//           const { geocodes: { '0': { location: { lng, lat } } } } = result
+//           map.setZoomAndCenter(10, new AMap.LngLat(lng, lat))
+//         }
+//       })
+//     })
+//     // 获取房源数据
+//     getAreaHouseInfo(value).then(({ data: { body } }) => {
+//       map.add(body.map(creatMarker))
+//     })
+//   }
+
+
+
+//   render() {
+//     return (
+//       <>
+//         <NavHeader>地图找房</NavHeader>
+//         <div id="container" className={style.container}></div>
+//       </>
+//     )
+//   }
+// }

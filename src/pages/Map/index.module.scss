@@ -2,7 +2,7 @@
   height: 100%;
 }
 
-.mapMarker {
+.mapCircle {
   background-color: #1677ff;
   border-radius: 50%;
   border: 2px solid #fff;
@@ -12,4 +12,41 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
+}
+
+.mapRect {
+  background-color: #1677ff;
+  display: flex;
+  justify-content: center;
+}
+
+.houseInfo {
+  height: 425px;
+  background-color: #fff;
+  overflow: scroll;
+}
+
+.houseDesc {
+  display: flex;
+  flex-direction: column;
+  h4 {
+    font-size: 16px;
+  }
+  .desc {
+    font-size: 14px;
+    color: #999;
+  }
+  .tag {
+    color: #fff;
+    background-color: #1677ff;
+    font-size: 12px;
+    border-radius: 4px;
+    padding: 2px;
+    margin: 0 2px;
+  }
+  .housePrice {
+    color: #fd3f31;
+    font-size: 14px;
+  }
+  
 }
