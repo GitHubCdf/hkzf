@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
-import { Image, List } from 'antd-mobile'
+import { Image, List, Toast } from 'antd-mobile'
+// import { Loading  } from 'antd-mobile-icons'
 // 自定义组件
 import NavHeader from '../../components/NavHeader'
 // request
@@ -10,11 +11,12 @@ import style from './index.module.scss'
 // 获取地图函数
 const { AMap } = window
 
-const HouseInfo = ({label, value }) => {
+const HouseInfo = ({ label, value, show }) => {
   // state 
   const [houseInfo, setHouseInfo] = useState([])
   // 获取房源信息
   async function getHouseInfo(value) {
+    if(value === '') return; 
     const { data: { body: { list } } } = await getCommunityHouseInfo(value)
     setHouseInfo(list)
   }
@@ -25,7 +27,7 @@ const HouseInfo = ({label, value }) => {
   }, [value])
 
   return (
-    <div className={[style.houseInfo, style.houseShow].join(' ')}>
+    <div className={[style.house, show ? style.houseShow : ''].join(' ')}>
       <section className={style.community}>
         <h3>{label}</h3>
       </section>
@@ -65,11 +67,19 @@ const HouseInfo = ({label, value }) => {
 
 
 export default function Map() {
-
+  // state 
+  const [houseShow, sethouseShow] = useState(false)
+  const [communityInfo, setcommunityInfo] = useState({ label: '', value: '' })
   // 创建 marker
 
   // initMap 初始化地图
   function initMap() {
+    // 
+    Toast.show({
+      icon: 'loading',
+      content: '加载中…',
+      duration: 0,
+    })
     // 初始化地图
     const map = new AMap.Map('container', {
       zoom: 10,
@@ -81,6 +91,10 @@ export default function Map() {
       map.addControl(toolbar);
       var scale = new AMap.Scale();//驾车路线规划
       map.addControl(scale);
+    })
+
+    map.on('touchmove', () => {
+      sethouseShow(false)
     })
 
     return map
@@ -109,6 +123,8 @@ export default function Map() {
       marker.on('touchstart', () => {
         const position = new AMap.LngLat(lng, lat)
         map.setCenter(position)
+        setcommunityInfo({ label, value })
+        sethouseShow(true)
       })
       return marker
     }
@@ -133,6 +149,11 @@ export default function Map() {
       })
       marker.setPosition(new AMap.LngLat(lng, lat))
       marker.on('touchstart', () => {
+        Toast.show({
+          icon: 'loading',
+          content: '加载中',
+          duration: 0,
+        })
         create({ lng, lat, value })
       })
       return marker
@@ -146,6 +167,7 @@ export default function Map() {
       map.setZoomAndCenter(zoom, new AMap.LngLat(lng, lat))
       getAreaHouseInfo(value).then(({ data: { body } }) => {
         map.add(body.map(creatMarker))
+        Toast.clear()
       })
     }
 
@@ -172,6 +194,7 @@ export default function Map() {
           const { geocodes: { '0': { location: { lng, lat } } } } = result
           map.setZoomAndCenter(10, new AMap.LngLat(lng, lat))
           getAreaHouseInfo(value).then(({ data: { body } }) => {
+            Toast.clear()
             map.add(body.map(createCircle))
           })
         }
@@ -197,7 +220,7 @@ export default function Map() {
     <>
       <NavHeader>地图找房</NavHeader>
       <div id="container" className={style.container}></div>
-      <HouseInfo label={'花园小区'} value={'AREA|88cff55c-aaa4-e2e0'}></HouseInfo>
+      <HouseInfo label={communityInfo.label} value={communityInfo.value} show={houseShow}></HouseInfo>
     </>
   )
 }

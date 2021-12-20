@@ -20,8 +20,20 @@
   justify-content: center;
 }
 
+
+
+.house {
+  height: 0;
+  transition: all 1s;
+  z-index: 999;
+}
+
+.houseShow {
+  height: 295px;
+}
+
 .houseInfo {
-  height: 425px;
+  height: 265px;
   background-color: #fff;
   overflow: scroll;
 }
